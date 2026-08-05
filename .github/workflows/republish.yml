@@ -11,6 +11,11 @@ permissions:
 jobs:
   republish:
     runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
     steps:
       - name: Download GTFSs
         run: |
@@ -20,34 +25,50 @@ jobs:
           LATEST=$(curl -fsSL "$BASE/" \
             | grep -oE 'GTFS[_-][0-9][0-9-]{6,9}\.zip' \
             | sort -u | tail -1)
+
           if [ -z "$LATEST" ]; then
-            echo "::error::No GTFS_*.zip"; exit 1
+            echo "::error::No GTFS_*.zip"
+            exit 1
           fi
+
           echo "Most Recent: $LATEST"
           curl -fsSL "$BASE/$LATEST" -o gtfs.zip
+
           echo "SRC_FILE=$LATEST" >> "$GITHUB_ENV"
           echo "FETCHED_AT=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_ENV"
 
       - name: Verify GTFS
         run: |
           set -euo pipefail
+
           unzip -l gtfs.zip | grep -q 'stops.txt'
           unzip -l gtfs.zip | grep -q 'stop_times.txt'
           unzip -l gtfs.zip | grep -q 'routes.txt'
-          echo "OK: stops/stop_times/routes"
-          ls -la gtfs.zip
 
-      - name: Publish "latest"
-        env:
-          GH_TOKEN: ${{ github.token }}
+          echo "OK: stops/stop_times/routes"
+          ls -lh gtfs.zip
+
+      - name: Publish latest release
         run: |
           set -euo pipefail
-          NOTES="GTFS de TransMilenio S.A. (SIMUR)
+
+          NOTES=$(cat <<EOF
+          GTFS de TransMilenio S.A. (SIMUR)
+
           Origin: https://storage.googleapis.com/gtfs-estaticos/${SRC_FILE}
           Last Updated: ${FETCHED_AT}
-          License: CC-BY-SA 4.0 — atribucion: TransMilenio S.A. / Datos Abiertos Bogotá."
-          gh release view latest >/dev/null 2>&1 \
-            || gh release create latest --title "GTFS Bogotá (última versión)" --notes "$NOTES"
+
+          License: CC-BY-SA 4.0 — atribución: TransMilenio S.A. / Datos Abiertos Bogotá.
+          EOF
+          )
+
+          if ! gh release view latest >/dev/null 2>&1; then
+            gh release create latest \
+              --title "GTFS Bogotá (última versión)" \
+              --notes "$NOTES"
+          fi
+
           gh release edit latest --notes "$NOTES"
           gh release upload latest gtfs.zip --clobber
-          echo "URL: https://github.com/panpanpanpaan/transmilenio-gtfs/releases/latest/download/gtfs.zip"
+
+          echo "URL: https://github.com/${GH_REPO}/releases/latest/download/gtfs.zip"

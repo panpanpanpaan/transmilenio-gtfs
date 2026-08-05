@@ -1,4 +1,4 @@
-name: GTFS Bogotá
+name: GTFS Bogota
 
 on:
   schedule:
@@ -53,18 +53,18 @@ jobs:
           set -euo pipefail
 
           NOTES=$(cat <<EOF
-          GTFS de TransMilenio S.A. (SIMUR)
+          GTFS TransMilenio S.A. (SIMUR)
 
           Origin: https://storage.googleapis.com/gtfs-estaticos/${SRC_FILE}
           Last Updated: ${FETCHED_AT}
 
-          License: CC-BY-SA 4.0 — atribución: TransMilenio S.A. / Datos Abiertos Bogotá.
+          License: CC-BY-SA 4.0: TransMilenio S.A. / Datos Abiertos Bogotá.
           EOF
           )
 
           if ! gh release view latest >/dev/null 2>&1; then
             gh release create latest \
-              --title "GTFS Bogotá (última versión)" \
+              --title "GTFS Bogota Latest" \
               --notes "$NOTES"
           fi
 
